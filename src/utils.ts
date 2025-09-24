@@ -463,19 +463,44 @@ export function getTargetInfo(targetPath?: string): TargetInfo {
         : 'linux';
 
   if (targetPath) {
-    if (targetPath.includes('windows')) {
+    // Handle mobile-specific targets first
+    if (targetPath === 'aarch64' || targetPath === 'aarch64-sim' || targetPath === 'x86_64') {
+      // These are iOS-specific targets from Tauri
+      platform = 'ios';
+      if (targetPath === 'aarch64') {
+        arch = 'aarch64'; // iOS device
+      } else if (targetPath === 'aarch64-sim') {
+        arch = 'aarch64'; // iOS simulator on Apple Silicon
+      } else if (targetPath === 'x86_64') {
+        arch = 'x86_64'; // iOS simulator on Intel
+      }
+    }
+    // Handle Android targets
+    else if (targetPath.includes('android')) {
+      platform = 'android';
+      if (targetPath.includes('-')) {
+        arch = targetPath.split('-')[0];
+      }
+    }
+    // Handle desktop targets
+    else if (targetPath.includes('windows')) {
       platform = 'windows';
+      if (targetPath.includes('-')) {
+        arch = targetPath.split('-')[0];
+      }
     } else if (targetPath.includes('darwin') || targetPath.includes('macos')) {
       platform = 'macos';
+      if (targetPath.includes('-')) {
+        arch = targetPath.split('-')[0];
+      }
     } else if (targetPath.includes('linux')) {
       platform = 'linux';
-    } else if (targetPath.includes('android')) {
-      platform = 'android';
-    } else if (targetPath.includes('ios')) {
-      platform = 'ios';
+      if (targetPath.includes('-')) {
+        arch = targetPath.split('-')[0];
+      }
     }
-
-    if (targetPath.includes('-')) {
+    // Handle standalone architecture targets (fallback for edge cases)
+    else if (targetPath.includes('-')) {
       arch = targetPath.split('-')[0];
     }
   }
