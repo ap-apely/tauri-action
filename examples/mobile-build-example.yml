@@ -1,0 +1,73 @@
+name: "mobile-build"
+
+on:
+  push:
+    branches:
+      - main
+
+# Example workflow for building mobile apps with Tauri
+# This workflow demonstrates proper mobile build configuration
+
+jobs:
+  build-mobile:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Android builds (works on Ubuntu runners)
+          - platform: "ubuntu-22.04"
+            mobile: "android"
+            args: ""
+          # iOS builds (only works on macOS runners)
+          - platform: "macos-latest"
+            mobile: "ios"
+            args: "--target aarch64"  # iOS ARM64 target
+          - platform: "macos-latest"
+            mobile: "ios"
+            args: "--target x86_64"   # iOS x86_64 simulator target
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Add iOS targets for macOS runners
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-ios,x86_64-apple-ios,aarch64-apple-ios-sim' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          # Install Android dependencies
+          sudo apt-get install -y default-jdk
+
+      - name: Setup Android SDK (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 33
+          build-tools: 33.0.0
+
+      - name: install frontend dependencies
+        run: npm install # change this to yarn, pnpm or bun depending on which one you use.
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          mobile: ${{ matrix.mobile }}
+          args: ${{ matrix.args }}
+          # Uncomment below to create releases
+          # tagName: app-v__VERSION__
+          # releaseName: "App v__VERSION__"
+          # releaseBody: "Mobile build for ${{ matrix.mobile }}"

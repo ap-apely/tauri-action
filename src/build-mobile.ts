@@ -15,6 +15,7 @@ export async function buildProject(
   const tauriArgs = debug
     ? ['--debug', ...(buildOpts.args ?? [])]
     : (buildOpts.args ?? []);
+  
   const configArgIdx = [...tauriArgs].findIndex(
     (e) => e === '-c' || e === '--config',
   );
@@ -28,6 +29,23 @@ export async function buildProject(
   if (!info.tauriPath) {
     throw Error("Couldn't detect path of tauri app");
   }
+
+  // Initialize mobile project if it doesn't exist
+  const mobileProjectPath = android 
+    ? join(info.tauriPath, 'gen/android')
+    : join(info.tauriPath, 'gen/apple');
+  
+  if (!existsSync(mobileProjectPath)) {
+    console.log(`Initializing ${android ? 'Android' : 'iOS'} project...`);
+    await runner.execTauriCommand(
+      [android ? 'android' : 'ios', 'init'],
+      [],
+      root,
+      undefined,
+      retryAttempts,
+    );
+  }
+
   await runner.execTauriCommand(
     [android ? 'android' : 'ios', 'build'],
     [...tauriArgs],

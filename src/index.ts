@@ -141,13 +141,30 @@ async function run(): Promise<void> {
         );
       }
     } else if (ios) {
+      // Create iOS-specific build options with filtered targets
+      const iosBuildOptions = { ...buildOptions };
+      if (iosBuildOptions.args) {
+        const targetArgIdx = iosBuildOptions.args.findIndex((e) => e === '-t' || e === '--target');
+        if (targetArgIdx >= 0 && targetArgIdx + 1 < iosBuildOptions.args.length) {
+          const targetValue = iosBuildOptions.args[targetArgIdx + 1];
+          // Replace macOS targets with iOS targets
+          if (targetValue === 'aarch64-apple-darwin') {
+            iosBuildOptions.args[targetArgIdx + 1] = 'aarch64';
+            console.log('Replaced macOS target aarch64-apple-darwin with iOS target aarch64');
+          } else if (targetValue === 'x86_64-apple-darwin') {
+            iosBuildOptions.args[targetArgIdx + 1] = 'x86_64';
+            console.log('Replaced macOS target x86_64-apple-darwin with iOS target x86_64');
+          }
+        }
+      }
+      
       if (includeRelease) {
         mobileArtifacts.push(
           ...(await buildMobile(
             projectPath,
             false,
             false,
-            buildOptions,
+            iosBuildOptions,
             retryAttempts,
           )),
         );
@@ -158,7 +175,7 @@ async function run(): Promise<void> {
             projectPath,
             false,
             true,
-            buildOptions,
+            iosBuildOptions,
             retryAttempts,
           )),
         );
