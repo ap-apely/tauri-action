@@ -8,7 +8,8 @@ import stringArgv from 'string-argv';
 import { getOrCreateRelease } from './create-release';
 import { uploadAssets as uploadReleaseAssets } from './upload-release-assets';
 import { uploadVersionJSON } from './upload-version-json';
-import { buildProject } from './build';
+import { buildProject as buildDesktop, buildProject } from './build-desktop';
+import { buildProject as buildMobile } from './build-mobile';
 import { execCommand, getInfo, getTargetInfo } from './utils';
 
 import type { Artifact, BuildOptions, InitOptions } from './types';
@@ -25,6 +26,9 @@ async function run(): Promise<void> {
     const appVersion = core.getInput('appVersion');
     const includeRelease = core.getBooleanInput('includeRelease');
     const includeDebug = core.getBooleanInput('includeDebug');
+    /*     const includeAndroid = core.getBooleanInput('includeAndroid');
+    const includeIOS =
+      process.platform === 'darwin' && core.getBooleanInput('includeIOS', {}); */
     const includeUpdaterJson = core.getBooleanInput('includeUpdaterJson');
     const updaterJsonKeepUniversal = core.getBooleanInput(
       'updaterJsonKeepUniversal',
@@ -50,6 +54,16 @@ async function run(): Promise<void> {
     const updaterJsonPreferNsis =
       core.getInput('updaterJsonPreferNsis')?.toLowerCase() === 'true';
 
+    // mobile
+    const mobile = core.getInput('mobile').toLowerCase();
+    // android should work on all runners but for `mobile: true` we only enable it for ubuntu runners. `mobile: android` enables it for all runners.
+    const android =
+      (process.platform === 'linux' && mobile === 'true') ||
+      mobile === 'android';
+    // iOS only works on macOS and therefore can be enabled the same with both `true` and `ios`
+    const ios =
+      process.platform === 'darwin' && (mobile === 'true' || mobile === 'ios');
+
     const buildOptions: BuildOptions = {
       tauriScript,
       args,
@@ -74,12 +88,16 @@ async function run(): Promise<void> {
     const configArg =
       configArgIdx >= 0 ? [...args][configArgIdx + 1] : undefined;
 
+    // We need to split release and debug artifacts for the updater json
     const releaseArtifacts: Artifact[] = [];
     const debugArtifacts: Artifact[] = [];
+    const mobileArtifacts: Artifact[] = [];
 
+    if (!android && !ios) {
+      // desktop
     if (includeRelease) {
       releaseArtifacts.push(
-        ...(await buildProject(
+          ...(await buildDesktop(
           projectPath,
           false,
           buildOptions,
@@ -90,7 +108,7 @@ async function run(): Promise<void> {
     }
     if (includeDebug) {
       debugArtifacts.push(
-        ...(await buildProject(
+          ...(await buildDesktop(
           projectPath,
           true,
           buildOptions,
@@ -99,7 +117,57 @@ async function run(): Promise<void> {
         )),
       );
     }
-    const artifacts = releaseArtifacts.concat(debugArtifacts);
+    } else if (android) {
+      if (includeRelease) {
+        mobileArtifacts.push(
+          ...(await buildMobile(
+            projectPath,
+            true,
+            false,
+            buildOptions,
+            retryAttempts,
+          )),
+        );
+      }
+      if (includeDebug) {
+        mobileArtifacts.push(
+          ...(await buildMobile(
+            projectPath,
+            true,
+            true,
+            buildOptions,
+            retryAttempts,
+          )),
+        );
+      }
+    } else if (ios) {
+      if (includeRelease) {
+        mobileArtifacts.push(
+          ...(await buildMobile(
+            projectPath,
+            false,
+            false,
+            buildOptions,
+            retryAttempts,
+          )),
+        );
+      }
+      if (includeDebug) {
+        mobileArtifacts.push(
+          ...(await buildMobile(
+            projectPath,
+            false,
+            true,
+            buildOptions,
+            retryAttempts,
+          )),
+        );
+      }
+    }
+
+    const artifacts = releaseArtifacts
+      .concat(debugArtifacts)
+      .concat(mobileArtifacts);
 
     if (artifacts.length === 0) {
       if (releaseId || tagName) {
