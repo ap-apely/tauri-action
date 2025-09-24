@@ -37,6 +37,17 @@ export async function buildProject(
   
   if (!existsSync(mobileProjectPath)) {
     console.log(`Initializing ${android ? 'Android' : 'iOS'} project...`);
+    
+    // For Android, check if NDK is available
+    if (android) {
+      const ndkHome = process.env.NDK_HOME || process.env.ANDROID_NDK_HOME;
+      if (!ndkHome) {
+        console.warn('Warning: NDK_HOME environment variable is not set. Android builds may fail.');
+        console.warn('Please ensure Android NDK is installed and NDK_HOME is set to the NDK path.');
+        console.warn('You can set it in your workflow with: env: NDK_HOME: ${{ env.ANDROID_NDK_HOME }}');
+      }
+    }
+    
     await runner.execTauriCommand(
       [android ? 'android' : 'ios', 'init'],
       [],
@@ -46,13 +57,29 @@ export async function buildProject(
     );
   }
 
-  await runner.execTauriCommand(
-    [android ? 'android' : 'ios', 'build'],
-    [...tauriArgs],
-    root,
-    undefined,
-    retryAttempts,
-  );
+  try {
+    await runner.execTauriCommand(
+      [android ? 'android' : 'ios', 'build'],
+      [...tauriArgs],
+      root,
+      undefined,
+      retryAttempts,
+    );
+  } catch (error) {
+    if (android) {
+      console.error('Android build failed. Common issues:');
+      console.error('1. NDK_HOME not set - ensure Android NDK is installed and NDK_HOME environment variable is set');
+      console.error('2. Missing Android SDK components - ensure Android SDK and build tools are installed');
+      console.error('3. Java/Kotlin compilation errors - check your Android-specific code');
+    } else {
+      console.error('iOS build failed. Common issues:');
+      console.error('1. Code signing - iOS builds require a development team or provisioning profile');
+      console.error('2. Missing iOS targets - ensure aarch64-apple-ios and x86_64-apple-ios targets are installed');
+      console.error('3. Xcode configuration - ensure Xcode is properly configured');
+      console.error('For CI/CD: Consider using debug builds or setting up proper code signing');
+    }
+    throw error;
+  }
   let artifacts: Artifact[] = [];
   if (android) {
     const artifactPaths = join(

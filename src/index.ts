@@ -149,10 +149,10 @@ async function run(): Promise<void> {
           const targetValue = iosBuildOptions.args[targetArgIdx + 1];
           // Replace macOS targets with iOS targets
           if (targetValue === 'aarch64-apple-darwin') {
-            iosBuildOptions.args[targetArgIdx + 1] = 'aarch64';
+            iosBuildOptions.args[targetArgIdx + 1] = '';
             console.log('Replaced macOS target aarch64-apple-darwin with iOS target aarch64');
           } else if (targetValue === 'x86_64-apple-darwin') {
-            iosBuildOptions.args[targetArgIdx + 1] = 'x86_64';
+            iosBuildOptions.args[targetArgIdx + 1] = '';
             console.log('Replaced macOS target x86_64-apple-darwin with iOS target x86_64');
           }
         }
