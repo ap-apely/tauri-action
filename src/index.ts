@@ -144,20 +144,20 @@ async function run(): Promise<void> {
       // Create iOS-specific build options with filtered targets
       const iosBuildOptions = { ...buildOptions };
       if (iosBuildOptions.args) {
-        const targetArgIdx = iosBuildOptions.args.findIndex((e) => e === '-t' || e === '--target');
-        if (targetArgIdx >= 0 && targetArgIdx + 1 < iosBuildOptions.args.length) {
-          const targetValue = iosBuildOptions.args[targetArgIdx + 1];
-          // Replace macOS targets with iOS targets
-          if (targetValue === 'aarch64-apple-darwin') {
-            iosBuildOptions.args[targetArgIdx + 1] = '';
-            console.log('Replaced macOS target aarch64-apple-darwin with iOS target aarch64');
-          } else if (targetValue === 'x86_64-apple-darwin') {
-            iosBuildOptions.args[targetArgIdx + 1] = '';
-            console.log('Replaced macOS target x86_64-apple-darwin with iOS target x86_64');
+        const targetArgIdx = iosBuildOptions.args.findIndex(
+          (e) => e === '-t' || e === '--target'
+        );
+        if (targetArgIdx >= 0) {
+          // Удаляем сам флаг --target или -t
+          iosBuildOptions.args.splice(targetArgIdx, 1);
+          // Если есть значение после флага, удаляем его тоже
+          if (targetArgIdx < iosBuildOptions.args.length) {
+            iosBuildOptions.args.splice(targetArgIdx, 1);
           }
+          console.log('Removed --target/-t argument');
         }
       }
-      
+
       if (includeRelease) {
         mobileArtifacts.push(
           ...(await buildMobile(
