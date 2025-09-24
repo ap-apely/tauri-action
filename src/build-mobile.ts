@@ -1,9 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-
 import { getRunner } from './runner';
-import { getInfo } from './utils';
-
+import { getInfo, createArtifact } from './utils';
 import type { Artifact, BuildOptions } from './types';
 
 export async function buildProject(
@@ -14,27 +12,22 @@ export async function buildProject(
   retryAttempts: number,
 ): Promise<Artifact[]> {
   const runner = await getRunner(root, buildOpts.tauriScript);
-
   const tauriArgs = debug
     ? ['--debug', ...(buildOpts.args ?? [])]
     : (buildOpts.args ?? []);
-
   const configArgIdx = [...tauriArgs].findIndex(
     (e) => e === '-c' || e === '--config',
   );
   const configArg =
     configArgIdx >= 0 ? [...tauriArgs][configArgIdx + 1] : undefined;
-
   const info = getInfo(
     root,
     { arch: 'mobile', platform: android ? 'android' : 'ios' },
     configArg,
   );
-
   if (!info.tauriPath) {
     throw Error("Couldn't detect path of tauri app");
   }
-
   await runner.execTauriCommand(
     [android ? 'android' : 'ios', 'build'],
     [...tauriArgs],
@@ -42,16 +35,15 @@ export async function buildProject(
     undefined,
     retryAttempts,
   );
-
   let artifacts: Artifact[] = [];
-
   if (android) {
     const artifactPaths = join(
       info.tauriPath,
       'gen/android/app/build/outputs/',
     );
-    artifacts = [
-      // unsinged release apks
+
+    const androidPaths = [
+      // unsigned release apks
       join(artifactPaths, 'apk/universal/release/app-universal-unsigned.apk'),
       join(artifactPaths, 'apk/arm64/release/app-arm64-unsigned.apk'),
       join(artifactPaths, 'apk/arm/release/app-arm-unsigned.apk'),
@@ -81,20 +73,38 @@ export async function buildProject(
       join(artifactPaths, 'bundle/armDebug/app-arm-debug.aab'),
       join(artifactPaths, 'bundle/x86_64Debug/app-x86_64-debug.aab'),
       join(artifactPaths, 'bundle/x86Debug/app-x86-debug.aab'),
-    ].map((path) => ({ path, arch: 'mobile' }));
+    ];
+
+    artifacts = androidPaths.map((path) =>
+      createArtifact({
+        path,
+        name: info.name,
+        debug,
+        platform: 'android',
+        arch: 'mobile',
+        version: info.version,
+      }),
+    );
   } else {
     const artifactPaths = join(info.tauriPath, 'gen/apple/build/');
     // TODO: Confirm where the iOS project name actually comes from. it may be time for a glob pattern here to get the ipa without knowing the name.
-    artifacts = [
+    const iosPaths = [
       join(artifactPaths, `arm64/${info.name}.ipa`),
       join(artifactPaths, `arm64-sim/${info.name}.ipa`),
-      join(artifactPaths, `/x86_64/${info.name}.ipa`),
-    ].map((path) => ({
-      path,
-      arch: 'mobile',
-    }));
-  }
+      join(artifactPaths, `x86_64/${info.name}.ipa`),
+    ];
 
+    artifacts = iosPaths.map((path) =>
+      createArtifact({
+        path,
+        name: info.name,
+        debug,
+        platform: 'ios',
+        arch: 'mobile',
+        version: info.version,
+      }),
+    );
+  }
   console.log(
     `Looking for artifacts in:\n${artifacts.map((a) => a.path).join('\n')}`,
   );

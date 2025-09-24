@@ -95,28 +95,28 @@ async function run(): Promise<void> {
 
     if (!android && !ios) {
       // desktop
-    if (includeRelease) {
-      releaseArtifacts.push(
+      if (includeRelease) {
+        releaseArtifacts.push(
           ...(await buildDesktop(
-          projectPath,
-          false,
-          buildOptions,
-          initOptions,
-          retryAttempts,
-        )),
-      );
-    }
-    if (includeDebug) {
-      debugArtifacts.push(
+            projectPath,
+            false,
+            buildOptions,
+            initOptions,
+            retryAttempts,
+          )),
+        );
+      }
+      if (includeDebug) {
+        debugArtifacts.push(
           ...(await buildDesktop(
-          projectPath,
-          true,
-          buildOptions,
-          initOptions,
-          retryAttempts,
-        )),
-      );
-    }
+            projectPath,
+            true,
+            buildOptions,
+            initOptions,
+            retryAttempts,
+          )),
+        );
+      }
     } else if (android) {
       if (includeRelease) {
         mobileArtifacts.push(

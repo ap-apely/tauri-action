@@ -38,6 +38,9 @@ inputs:
   includeRelease:
     description: 'Whether to include a release build or not'
     default: 'true'
+  mobile:
+    description: 'Toggle between desktop and mobile builds, use includeDebug and includeRelease to switch between release and debug builds. Set it to `true` to enable iOS builds on macOS runners and Android builds on Ubuntu runners. Set it to `android` to enable Android builds on all runners. `ios` behaves the same as `true` and only works on macOS runners. Note that this setting, especially for iOS, is currently considered unstable!'
+    default: 'false'
   includeUpdaterJson:
     description: 'Whether to upload a static JSON file for the updater using GitHub Releases as the CDN'
     default: 'true'
