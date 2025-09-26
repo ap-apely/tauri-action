@@ -367,6 +367,7 @@ export async function execCommand(
   const child = execa(command, args, {
     cwd,
     env: finalEnv,
+    lines: true,
     stdio: "pipe",
     reject: false,
   });

@@ -61,6 +61,7 @@ export async function buildProject(
       root,
       undefined,
       retryAttempts,
+      false
     );
   }
 
