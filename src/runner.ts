@@ -26,6 +26,7 @@ class Runner {
     cwd?: string,
     env?: Record<string, string>,
     retryAttempts: number = 0,
+    with_force_color_disabled: boolean = true
   ): Promise<void> {
     const args: string[] = [];
 
@@ -44,7 +45,7 @@ class Runner {
     args.push(...commandOptions);
 
     return retry(
-      () => execCommand(this.bin, args, { cwd }, env),
+      () => execCommand(this.bin, args, { cwd }, env, with_force_color_disabled),
       retryAttempts + 1,
     ) as Promise<void>;
   }

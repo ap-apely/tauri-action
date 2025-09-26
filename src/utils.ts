@@ -92,6 +92,14 @@ export function getAssetName(asset: Artifact, pattern?: string) {
       asset as unknown as Record<string, string>,
     );
   } else {
+    // For mobile platforms, use a consistent naming pattern
+    if (asset.platform === 'android' || asset.platform === 'ios') {
+      const debugSuffix = asset.mode === 'debug' ? '-debug' : '';
+      const archSuffix = asset.arch !== 'mobile' ? `_${asset.arch}` : '';
+      return `${asset.name}_${asset.version}_${asset.platform}${archSuffix}${debugSuffix}${asset.ext}`;
+    }
+    
+    // Keep existing logic for desktop platforms
     const name = basename(asset.path, asset.ext);
     let arch = '';
     let dbg = '';
@@ -348,17 +356,20 @@ export async function execCommand(
   args: string[],
   { cwd }: { cwd?: string } = {},
   env: Record<string, string> = {},
+  with_force_color_disabled: boolean = true
 ): Promise<void> {
   console.log(`running ${command}`, args);
 
+  const finalEnv = with_force_color_disabled
+    ? { FORCE_COLOR: "0", ...env }
+    : env;
+
   const child = execa(command, args, {
     cwd,
-    env: { FORCE_COLOR: '0', ...env },
-    lines: true,
-    stdio: 'pipe',
+    env: finalEnv,
+    stdio: "pipe",
     reject: false,
   });
-
   child.stdout?.on('data', (data) => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     process.stdout.write(data);
